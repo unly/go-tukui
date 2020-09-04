@@ -1,8 +1,6 @@
 package tukui
 
 import (
-	"encoding/json"
-	"io/ioutil"
 	"net/http"
 	"strconv"
 )
@@ -47,13 +45,7 @@ func (c *AddonClient) GetAddon(id int) (Addon, *http.Response, error) {
 	query.Add(c.getQueryParameter("addon"), strconv.Itoa(id))
 	req.URL.RawQuery = query.Encode()
 
-	resp, err := c.client.httpClient.Do(req)
-	if err != nil {
-		return addon, resp, err
-	}
-	defer resp.Body.Close()
-
-	err = json.NewDecoder(resp.Body).Decode(&addon)
+	resp, err := c.client.request(req, &addon)
 
 	return addon, resp, err
 }
@@ -70,18 +62,7 @@ func (c *AddonClient) GetAddons() ([]Addon, *http.Response, error) {
 	query.Add(c.getQueryParameter("addons"), "all")
 	req.URL.RawQuery = query.Encode()
 
-	resp, err := c.client.httpClient.Do(req)
-	if err != nil {
-		return addons, resp, err
-	}
-	defer resp.Body.Close()
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return addons, resp, err
-	}
-
-	err = json.Unmarshal(body, &addons)
+	resp, err := c.client.request(req, &addons)
 
 	return addons, resp, err
 }
