@@ -3,7 +3,10 @@ package tukui
 import (
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 func setupTestEnv() (client *Client, mux *http.ServeMux, teardown func()) {
@@ -20,10 +23,18 @@ func setupTestEnv() (client *Client, mux *http.ServeMux, teardown func()) {
 	return client, mux, server.Close
 }
 
-func testMethod(t *testing.T, r *http.Request, want string) {
+func testHttpMethod(t *testing.T, r *http.Request, want string) {
 	t.Helper()
 	if got := r.Method; got != want {
 		t.Errorf("Request method: %v, want %v", got, want)
+	}
+}
+
+func testHttpQuery(t *testing.T, r *http.Request, want url.Values) {
+	t.Helper()
+	got := r.URL.Query()
+	if !cmp.Equal(got, want) {
+		t.Errorf("Request query: %v, want %v", got, want)
 	}
 }
 
