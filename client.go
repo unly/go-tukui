@@ -1,6 +1,11 @@
 package tukui
 
-import "net/http"
+import (
+	"encoding/json"
+	"errors"
+	"io/ioutil"
+	"net/http"
+)
 
 const baseUrl = "https://www.tukui.org/api.php"
 
@@ -30,4 +35,24 @@ func NewClient(client *http.Client) *Client {
 	}
 
 	return &c
+}
+
+func (c *Client) request(req *http.Request, data interface{}) (*http.Response, error) {
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return resp, err
+	}
+
+	defer resp.Body.Close()
+
+	if resp.ContentLength == 0 {
+		return resp, errors.New("empty response")
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return resp, err
+	}
+
+	return resp, json.Unmarshal(body, data)
 }
