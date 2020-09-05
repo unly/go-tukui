@@ -1,4 +1,4 @@
-module github.com/unly/go-tukui/v0
+module github.com/unly/go-tukui
 
 go 1.15
 
