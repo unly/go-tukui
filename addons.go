@@ -12,6 +12,7 @@ type Addon struct {
 	Author        *string `json:"author,omitempty"`
 	Version       *string `json:"version,omitempty"`
 	ScreenshotUrl *string `json:"screenshot_url,omitempty"`
+	URL           *string `json:"url,omitempty"`
 	Category      *string `json:"category,omitempty"`
 	Downloads     *string `json:"downloads,omitempty"`
 	LastUpdate    *string `json:"lastupdate,omitempty"`
