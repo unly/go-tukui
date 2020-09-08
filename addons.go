@@ -69,7 +69,7 @@ func (c *addonClient) GetAddon(id int) (Addon, *http.Response, error) {
 	return addon, resp, err
 }
 
-// GetAddons retuns a slice of all Addons available.
+// GetAddons returns a slice of all Addons available.
 func (c *addonClient) GetAddons() ([]Addon, *http.Response, error) {
 	var addons []Addon
 
