@@ -1,6 +1,9 @@
 package tukui
 
 import (
+	"encoding/json"
+	"errors"
+	"io/ioutil"
 	"net/http"
 	"strconv"
 )
@@ -38,51 +41,168 @@ type Addon struct {
 	DonateUrl *string `json:"donate_url,omitempty"`
 }
 
-type addonClient struct {
-	client  *Client
-	classic bool
+type uiAddon struct {
+	Addon
+
+	// id is an integer not a string for UIs
+	Id *json.Number `json:"id,omitempty"`
+	// downloads is an integer not a string for UIs
+	Downloads *json.Number `json:"downloads,omitempty"`
+	// last download has a different name for UIs
+	LastDownload *string `json:"lastdownload,omitempty"`
 }
 
-func (c *addonClient) getQueryParameter(s string) string {
-	if c.classic {
-		return "classic-" + s
+// AddonClient is a set of functions that can be queried from the TukUI.org API
+type AddonClient interface {
+	// GetAddon returns the Addon for the given ID. The ID is a positive number.
+	// For non existing IDs the function will return an error.
+	GetAddon(id int) (Addon, *http.Response, error)
+	// GetAddons returns a slice of all Addons available.
+	GetAddons() ([]Addon, *http.Response, error)
+	// GetTukUI returns the Addon for the main TukUI
+	GetTukUI() (Addon, *http.Response, error)
+	// GetElvUI returns the Addon for the main ElvUI
+	GetElvUI() (Addon, *http.Response, error)
+}
+
+type retailClient struct {
+	apiClient
+}
+
+type classicClient struct {
+	apiClient
+}
+
+type apiClient struct {
+	client *Client
+}
+
+func newRetailClient(client *Client) *retailClient {
+	return &retailClient{
+		apiClient: apiClient{
+			client: client,
+		},
 	}
-	return s
 }
 
-// GetAddon returns the Addon for the given ID. The ID is a positive number.
-// For non existing IDs the function will return an error.
-func (c *addonClient) GetAddon(id int) (Addon, *http.Response, error) {
+func newClassicClient(client *Client) *classicClient {
+	return &classicClient{
+		apiClient: apiClient{
+			client: client,
+		},
+	}
+}
+
+func (r *retailClient) GetTukUI() (Addon, *http.Response, error) {
+	var tukui uiAddon
+
+	resp, err := r.queryAPI("ui", "tukui", &tukui)
+
+	return convertAddon(tukui), resp, err
+}
+
+func (r *retailClient) GetElvUI() (Addon, *http.Response, error) {
+	var elvui uiAddon
+
+	resp, err := r.queryAPI("ui", "elvui", &elvui)
+
+	return convertAddon(elvui), resp, err
+}
+
+func (r *retailClient) GetAddon(id int) (Addon, *http.Response, error) {
 	var addon Addon
 
-	req, err := http.NewRequest(http.MethodGet, c.client.url, nil)
-	if err != nil {
-		return addon, nil, err
-	}
-
-	query := req.URL.Query()
-	query.Add(c.getQueryParameter("addon"), strconv.Itoa(id))
-	req.URL.RawQuery = query.Encode()
-
-	resp, err := c.client.request(req, &addon)
+	resp, err := r.queryAPI("addon", strconv.Itoa(id), &addon)
 
 	return addon, resp, err
 }
 
-// GetAddons returns a slice of all Addons available.
-func (c *addonClient) GetAddons() ([]Addon, *http.Response, error) {
+func (r *retailClient) GetAddons() ([]Addon, *http.Response, error) {
 	var addons []Addon
 
-	req, err := http.NewRequest(http.MethodGet, c.client.url, nil)
+	resp, err := r.queryAPI("addons", "all", &addons)
+
+	return addons, resp, err
+}
+
+func (c *classicClient) GetTukUI() (Addon, *http.Response, error) {
+	return c.GetAddon(1)
+}
+
+func (c *classicClient) GetElvUI() (Addon, *http.Response, error) {
+	return c.GetAddon(2)
+}
+
+func (c *classicClient) GetAddon(id int) (Addon, *http.Response, error) {
+	var addon Addon
+
+	resp, err := c.queryAPI("classic-addon", strconv.Itoa(id), &addon)
+
+	return addon, resp, err
+}
+
+func (c *classicClient) GetAddons() ([]Addon, *http.Response, error) {
+	var addons []Addon
+
+	resp, err := c.queryAPI("classic-addons", "all", &addons)
+
+	return addons, resp, err
+}
+
+func (a *apiClient) queryAPI(key, value string, data interface{}) (*http.Response, error) {
+	req, err := http.NewRequest(http.MethodGet, a.client.url, nil)
 	if err != nil {
-		return addons, nil, err
+		return nil, err
 	}
 
 	query := req.URL.Query()
-	query.Add(c.getQueryParameter("addons"), "all")
+	query.Add(key, value)
 	req.URL.RawQuery = query.Encode()
 
-	resp, err := c.client.request(req, &addons)
+	resp, err := a.client.httpClient.Do(req)
+	if err != nil {
+		return resp, err
+	}
 
-	return addons, resp, err
+	defer resp.Body.Close()
+
+	if resp.ContentLength == 0 {
+		return resp, errors.New("empty response")
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return resp, err
+	}
+
+	return resp, json.Unmarshal(body, data)
+}
+
+func convertAddon(ui uiAddon) Addon {
+	addon := Addon{
+		Name:          ui.Name,
+		SmallDesc:     ui.SmallDesc,
+		Author:        ui.Author,
+		Version:       ui.Version,
+		ScreenshotUrl: ui.ScreenshotUrl,
+		URL:           ui.URL,
+		Category:      ui.Category,
+		LastUpdate:    ui.LastUpdate,
+		Patch:         ui.Patch,
+		WebUrl:        ui.WebUrl,
+		LastDownload:  ui.LastDownload,
+		DonateUrl:     ui.DonateUrl,
+	}
+
+	if ui.Id != nil {
+		id := ui.Id.String()
+		addon.Id = &id
+	}
+
+	if ui.Downloads != nil {
+		downloads := ui.Downloads.String()
+		addon.Downloads = &downloads
+	}
+
+	return addon
 }
