@@ -1,21 +1,16 @@
 package tukui
 
-import (
-	"encoding/json"
-	"errors"
-	"io/ioutil"
-	"net/http"
-)
+import "net/http"
 
-const baseUrl = "https://www.tukui.org/api.php"
+const baseURL = "https://www.tukui.org/api.php"
 
 // The Client is a simple http client to access the TukUI.org API.
 // Addons can be accessed either by the RetailAddons or ClassicAddons field.
 type Client struct {
 	url           string
 	httpClient    *http.Client
-	RetailAddons  *addonClient
-	ClassicAddons *addonClient
+	RetailAddons  AddonClient
+	ClassicAddons AddonClient
 }
 
 // NewClient creates a new Client struct and returns a pointer to it.
@@ -27,37 +22,11 @@ func NewClient(client *http.Client) *Client {
 	}
 
 	c := Client{
-		url:        baseUrl,
+		url:        baseURL,
 		httpClient: client,
 	}
-	c.RetailAddons = &addonClient{
-		client:  &c,
-		classic: false,
-	}
-	c.ClassicAddons = &addonClient{
-		client:  &c,
-		classic: true,
-	}
+	c.RetailAddons = newRetailClient(&c)
+	c.ClassicAddons = newClassicClient(&c)
 
 	return &c
-}
-
-func (c *Client) request(req *http.Request, data interface{}) (*http.Response, error) {
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return resp, err
-	}
-
-	defer resp.Body.Close()
-
-	if resp.ContentLength == 0 {
-		return resp, errors.New("empty response")
-	}
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return resp, err
-	}
-
-	return resp, json.Unmarshal(body, data)
 }
