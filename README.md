@@ -34,6 +34,18 @@ Or query all available addons.
 addons, resp, err := client.ClassicAddons.GetAddons()
 ```
 
+For the TukUI and the ElvUI there are dedicated functions.
+In the case of TukUI there is;
+```
+tukui, resp, err := client.ClassicAddons.GetTukUI()
+```
+and respectively:
+```
+elvui, resp, err := client.ClassicAddons.GetElvUI()
+```
+
+All API queries return the [Addon struct](https://pkg.go.dev/github.com/unly/go-tukui#Addon).
+
 ## License
 
 Licensed under the [MIT](https://github.com/unly/go-tukui/blob/master/LICENSE) license.
