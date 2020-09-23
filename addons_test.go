@@ -1,6 +1,7 @@
 package tukui
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -989,5 +990,98 @@ func TestClassic_GetElvUI_NoContent(t *testing.T) {
 	want := "empty response"
 	if !cmp.Equal(err.Error(), want) {
 		t.Errorf("ClassicAddons.GetElvUI() returned %+v, want %+v", err, want)
+	}
+}
+
+func TestConvertAddon_NoID_NoDownloads_NoLastDownload(t *testing.T) {
+	ui := uiAddon{
+		Addon: Addon{
+			Author:        String("Elv"),
+			URL:           String("https://www.tukui.org/classic-addons.php?download=2"),
+			Version:       String("1.31"),
+			Name:          String("ElvUI"),
+			Patch:         String("1.13.5"),
+			LastUpdate:    String("2020-09-07 19:42:13"),
+			WebUrl:        String("https://www.tukui.org/classic-addons.php?id=2"),
+			SmallDesc:     String("A USER INTERFACE DESIGNED AROUND USER-FRIENDLINESS WITH EXTRA FEATURES THAT ARE NOT INCLUDED IN THE STANDARD UI.\r\n"),
+			ScreenshotUrl: String("https://www.tukui.org/2"),
+			Category:      String("Interfaces"),
+		},
+		Id:           nil,
+		Downloads:    nil,
+		LastDownload: nil,
+	}
+
+	got := convertAddon(ui)
+
+	want := Addon{
+		Author:        String("Elv"),
+		URL:           String("https://www.tukui.org/classic-addons.php?download=2"),
+		Version:       String("1.31"),
+		Name:          String("ElvUI"),
+		Patch:         String("1.13.5"),
+		LastUpdate:    String("2020-09-07 19:42:13"),
+		WebUrl:        String("https://www.tukui.org/classic-addons.php?id=2"),
+		SmallDesc:     String("A USER INTERFACE DESIGNED AROUND USER-FRIENDLINESS WITH EXTRA FEATURES THAT ARE NOT INCLUDED IN THE STANDARD UI.\r\n"),
+		ScreenshotUrl: String("https://www.tukui.org/2"),
+		Category:      String("Interfaces"),
+	}
+
+	if !cmp.Equal(got, want) {
+		t.Errorf("convertAddon() returned %+v, want %+v", got, want)
+	}
+}
+
+func TestConvertAddon_EmptyID(t *testing.T) {
+	ui := uiAddon{
+		Addon: Addon{
+			Author:        String("Elv"),
+			URL:           String("https://www.tukui.org/classic-addons.php?download=2"),
+			Version:       String("1.31"),
+			Name:          String("ElvUI"),
+			Patch:         String("1.13.5"),
+			LastUpdate:    String("2020-09-07 19:42:13"),
+			WebUrl:        String("https://www.tukui.org/classic-addons.php?id=2"),
+			SmallDesc:     String("A USER INTERFACE DESIGNED AROUND USER-FRIENDLINESS WITH EXTRA FEATURES THAT ARE NOT INCLUDED IN THE STANDARD UI.\r\n"),
+			ScreenshotUrl: String("https://www.tukui.org/2"),
+			Category:      String("Interfaces"),
+		},
+		Id:           (*json.Number)(String("")),
+		Downloads:    (*json.Number)(String("123")),
+		LastDownload: String("2020-09-21 13:58:12"),
+	}
+
+	got := convertAddon(ui)
+
+	want := Addon{
+		Author:        String("Elv"),
+		URL:           String("https://www.tukui.org/classic-addons.php?download=2"),
+		Version:       String("1.31"),
+		Name:          String("ElvUI"),
+		Patch:         String("1.13.5"),
+		LastUpdate:    String("2020-09-07 19:42:13"),
+		WebUrl:        String("https://www.tukui.org/classic-addons.php?id=2"),
+		SmallDesc:     String("A USER INTERFACE DESIGNED AROUND USER-FRIENDLINESS WITH EXTRA FEATURES THAT ARE NOT INCLUDED IN THE STANDARD UI.\r\n"),
+		ScreenshotUrl: String("https://www.tukui.org/2"),
+		Category:      String("Interfaces"),
+		Id:            String(""),
+		Downloads:     String("123"),
+		LastDownload:  String("2020-09-21 13:58:12"),
+	}
+
+	if !cmp.Equal(got, want) {
+		t.Errorf("convertAddon() returned %+v, want %+v", got, want)
+	}
+}
+
+func TestConvertAddon_EmptyAddon(t *testing.T) {
+	ui := uiAddon{}
+
+	got := convertAddon(ui)
+
+	want := Addon{}
+
+	if !cmp.Equal(got, want) {
+		t.Errorf("convertAddon() returned %+v, want %+v", got, want)
 	}
 }
